@@ -45,6 +45,7 @@ public:
 
 	  void ret();
 	  void emit(const Immediate&);
+	  void emit(const Operand & operand );
 	  void emitREXPrefix(Register, const Operand&);
 
 	  // Stack

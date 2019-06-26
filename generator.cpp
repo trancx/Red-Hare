@@ -17,10 +17,12 @@ class Register;
 
 #ifdef DEBUG
 
+//			*pc++ = (x);
+//			这样为什么会错, 因为有自增
 #define EMIT(x) \
 		do { \
 			byte temp = (byte)(x);\
-			*pc++ = (x); \
+			*pc++ = (temp); \
 			printf("%#hhx ", temp); \
 		} while(0)
 
@@ -75,6 +77,24 @@ void Generator::emit(const Immediate& x) {
 #endif
 }
 
+void Generator::emit(const Operand & operand ) {
+	int i = 0, len;
+	len = operand.length;
+	while( i < len ) {
+		EMIT(operand.buffer[i]);
+		i++;
+	}
+	/**
+	 do { \
+		byte temp = (byte)(dst.buffer[i]);\
+		*pc++ = (dst.buffer[i]); \
+		printf("%#hhx ", temp); \
+	} while(0)
+
+	if i++, that will be terrible
+	 */
+}
+
 
 /**
  * 	SIB or NO SIB, operand knows it best~
@@ -94,7 +114,6 @@ void Generator::emitREXPrefix(Register reg, const Operand& operand ) {
 	b = (byte)(REX & 0xff);
 	EMIT(b);
 }
-
 
 // FIXME: space left check~
 
@@ -121,11 +140,15 @@ void Generator::push(Register reg) {
 		EMIT( 0x40 | reg.getRexPrefix() );
 		EMIT( 0x50 | code );
 	}
-	ASM("pushq %%%s\n", reg.getName());
+	ASM("pushq %s\n", reg.getName());
 }
 
+// 0xff reg = 110, p2040, push Ev
 void Generator::push(const Operand &src) {
-
+	EMIT(0xff);
+	src.buffer[0] |= 0x30; // reg = 110
+	emit(src);
+	ASM("push %s\n", src.getName());
 }
 
 // REX 0100 WRXB, we need B
@@ -141,7 +164,7 @@ void Generator::pop(Register dst) {
 		EMIT( 0x40 | dst.getRexPrefix() ); // fill B
 		EMIT( 0x58 | code );
 	}
-	ASM("popq %%%s\n", dst.getName());
+	ASM("popq %s\n", dst.getName());
 }
 
 void Generator::ret() {
@@ -149,10 +172,11 @@ void Generator::ret() {
 	ASM("retq\n");
 }
 
+// 0x8F  reg = 000, no need to modify
 void Generator::pop(const Operand &dst) {
-
-
-
+	EMIT(0x8f);
+	emit(dst);
+	ASM("pop %s\n", dst.getName());
 }
 
 // 1. 0xc7  mov Ev, Iz   mod = 11, R/m = dst  REX extended
@@ -171,44 +195,45 @@ void Generator::mov(Register dst, int32_t imm32) {
 	}
 	// FIXME : dont use local var, use emit(int32_t)
 	emit(Immediate(imm32));
-	ASM("movq $%#08x, %%%s\n", imm32, dst.getName());
+
+	ASM("movq $%#08x, %s\n", imm32, dst.getName());
 }
 
 // mov Ev, Iz  0xc7  mod , R/m = dst
 void Generator::mov(const Operand &dst, const Immediate &x) {
+	// 1. Fill REX
+	EMIT(0x48 | dst.getRexPrefix() );
+	// 2. OPCODE
+	EMIT(0xc7);
+	// 3. No reg, so ~
+	emit(dst);
+	// 4. Immdiate x
+	emit(x);
 
+	ASM("mov $%d, %s\n", x.x_, dst.getName());
 }
-
-
 
 // mov Gv, Ev
 void Generator::mov(Register dst, const Operand &src) {
-	int i  = 0, len;
+
 	emitREXPrefix(dst, src);
 	EMIT(0x8B);
 	src.buffer[0] |= (byte)((dst.getReg() & 0x7) << 3);  // most  significant in REX prefix
-	len = src.length;
-	while( i < len ) {
-		EMIT(src.buffer[i++]);
-	}
-#ifdef DEBUG
-		ASM("mov %%%s, %%%s\n", src.getName(), dst.getName());
-#endif
+	emit(src);
+
+	ASM("mov %s, %s\n", src.getName(), dst.getName());
 }
 
 // mov Ev, Gv
 void Generator::mov(const Operand &dst, Register src) {
-	int i  = 0, len;
+
 	emitREXPrefix(src, dst);
 	EMIT(0x89);
 	dst.buffer[0] |= (byte)((src.getReg() & 0x7) << 3);  // most  significant in REX prefix
-	len = dst.length;
-	while( i < len ) {
-			EMIT(dst.buffer[i++]);
-	}
-#ifdef DEBUG
-		ASM("mov %%%s, %%%s\n", src.getName(), dst.getName());
-#endif
+	emit(dst);
+
+	ASM("mov %s, %s\n", src.getName(), dst.getName());
+
 }
 
 

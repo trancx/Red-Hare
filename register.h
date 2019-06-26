@@ -177,7 +177,7 @@ inline Operand::Operand(Register reg) : length(0), is_SIB(false) {
 	memset(buffer, 0, Operand_LENGTH);
 #ifdef DEBUG
 	memset(name, 0, 32);
-	strncpy(name, reg.getName(), strlen(reg.getName())+1 );
+	strncpy(name, reg.getName(), 32);
 #endif
 	set_mod(DIRECT);
 	rm = reg.getReg();

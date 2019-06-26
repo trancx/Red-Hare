@@ -13,6 +13,8 @@
 //		0x48, 0x89, 0xe5, 0x48, 0x83, 0xec, 0x40, 0xc7, 0x45, 0xec,
 //		0x7, 0,};
 
+#define DEFINE_REG_OPERAND(reg) \
+	core::Operand reg = core::Operand(core::reg)
 
 
 typedef int (*func)(void);
@@ -41,9 +43,16 @@ int main() {
 	core::Generator * g;
 	g = new core::Generator(reinterpret_cast<byte*>(address), size);
 
-	core::Operand r11 = core::Operand(core::r11);
-	core::Operand rax = core::Operand(core::rax);
-	core::Operand rbx = core::Operand(core::rbx);
+	DEFINE_REG_OPERAND(rax);
+	DEFINE_REG_OPERAND(rbx);
+	DEFINE_REG_OPERAND(rcx);
+	DEFINE_REG_OPERAND(rdx);
+	DEFINE_REG_OPERAND(rsi);
+	DEFINE_REG_OPERAND(rdi);
+	DEFINE_REG_OPERAND(rbp);
+	DEFINE_REG_OPERAND(rsp);
+	DEFINE_REG_OPERAND(r8);
+	DEFINE_REG_OPERAND(r11);
 //	byte buf[1024];
 //	memset(buf, 0, 1024);
 //	g = new core::Generator(buf, size);
@@ -51,8 +60,11 @@ int main() {
 	puts("------------------------------------------");
 	{
 		g->push(core::rbp);
-		g->mov(core::r11, 10);
-		g->mov(rax, core::r11);
+		g->mov(core::rbx, 10);
+//		g->mov(rax, core::Immediate(10));
+		g->push(rbx);
+		g->pop(rax);
+//		g->mov(rax, core::r11);
 //		g->push(core::r11);
 //		g->pop(core::rax);
 		g->pop(core::rbp);
@@ -78,7 +90,7 @@ int main() {
 //	}
 
 	delete g;
-//	munmap(address, size);
+	munmap(address, size);
 
 //	char * array = (char *)malloc(33);
 //	memcpy(array, buff, 33 );
